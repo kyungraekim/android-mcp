@@ -5,10 +5,16 @@ import android.util.Log
 import com.kyungrae.android.mcp.adapters.AndroidAppAdapters
 import io.modelcontextprotocol.kotlin.sdk.ClientCapabilities
 import io.modelcontextprotocol.kotlin.sdk.Implementation
+import io.modelcontextprotocol.kotlin.sdk.JSONRPCMessage
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.shared.AbstractTransport
+import io.modelcontextprotocol.kotlin.sdk.shared.Transport
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -22,6 +28,8 @@ interface LanguageModelInterface {
 
 class McpHost(private val context: Context) {
     private val TAG = "McpHost"
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Clients for different connection types
     private val adaptedAppClients = mutableMapOf<String, Client>() // Adapted standard Android apps
@@ -82,10 +90,15 @@ class McpHost(private val context: Context) {
         )
 
         // Create a local in-memory connection between client and server
+        val (clientTransport, serverTransport) = createInMemoryTransport()
 
         // Connect both sides
+        val clientJob = scope.async { client.connect(clientTransport) }
+        val serverJob = scope.async { server.connect(serverTransport) }
 
         // Wait for both connections to complete
+        clientJob.await()
+        serverJob.await()
 
         Log.d(TAG, "Created adapter client for: $adapterId")
         return client
@@ -99,6 +112,42 @@ class McpHost(private val context: Context) {
      * Clean up all connections
      */
     suspend fun shutdown() {
+
+    }
+
+    /**
+     * Create an in-memory transport pair for local client-server communication
+     */
+    private fun createInMemoryTransport(): Pair<Transport, Transport> {
+        // In a real implementation, you might use InMemoryTransport like in your test code
+        // For simplicity, we'll just use a placeholder
+        return InMemoryTransport.createLinkedPair()
+    }
+}
+
+
+class InMemoryTransport : AbstractTransport() {
+    private var otherTransport: InMemoryTransport? = null
+
+    companion object {
+        fun createLinkedPair(): Pair<Transport, Transport> {
+            val clientTransport = InMemoryTransport()
+            val serverTransport = InMemoryTransport()
+            clientTransport.otherTransport = serverTransport
+            serverTransport.otherTransport = clientTransport
+            return Pair(clientTransport, serverTransport)
+        }
+    }
+
+    override suspend fun start() {
+
+    }
+
+    override suspend fun send(message: JSONRPCMessage) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun close() {
 
     }
 }
