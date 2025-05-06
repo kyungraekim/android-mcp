@@ -20,4 +20,10 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "android-mcp"
+include(":app_interface")
+include(":service_interface")
+include(":service")
+include(":datecalculator")
+include(":timecalculator")
+include(":debug_app")
 include(":app")
