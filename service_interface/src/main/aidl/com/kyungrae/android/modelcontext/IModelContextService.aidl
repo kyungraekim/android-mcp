@@ -3,27 +3,36 @@ package com.kyungrae.android.modelcontext;
 
 import com.kyungrae.android.modelcontext.IServiceDiscoveryCallback;
 import com.kyungrae.android.modelcontext.ServiceInfo;
+import com.kyungrae.android.modelcontext.ToolInfo;
+import com.kyungrae.android.modelcontext.ResourceInfo;
+import com.kyungrae.android.modelcontext.ContentItem;
 
-// 서비스 관리자 인터페이스
+/**
+ * Enhanced service manager interface that provides MCP-like functionality
+ * Manages the discovery and connection to MCP-compatible services
+ */
 interface IModelContextService {
-    // 서비스 발견 요청
+    // Basic management operations
     void discoverServices(IServiceDiscoveryCallback callback);
-
-    // 특정 유형의 서비스 목록 요청
     List<ServiceInfo> getServicesByType(String type);
-
-    // 서비스 연결 요청
     boolean connectToService(in ServiceInfo serviceInfo);
-
-    // 서비스 연결 해제 요청
     void disconnectFromService(in ServiceInfo serviceInfo);
 
-    // 연결된 서비스를 통한 계산 요청
+    // Basic calculation (backward compatibility)
     String calculate(String serviceType, String value);
 
-    // 특정 유형의 서비스가 연결되었는지 확인
+    // Connection status information
     boolean isServiceTypeConnected(String serviceType);
-
-    // 서비스 버전 정보 조회
     String getServiceVersion(String serviceType);
+
+    // MCP-like tool operations
+    List<ToolInfo> listTools(String serviceType);
+    List<ContentItem> callTool(String serviceType, String toolName, String jsonArguments);
+
+    // MCP-like resource operations
+    List<ResourceInfo> listResources(String serviceType);
+    List<ContentItem> readResource(String serviceType, String uri);
+
+    // Capability checking
+    boolean serviceHasCapability(String serviceType, String capability);
 }

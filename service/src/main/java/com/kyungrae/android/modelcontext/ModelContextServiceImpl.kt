@@ -51,7 +51,7 @@ class ModelContextServiceImpl : Service() {
     private val serviceConnections = mutableMapOf<String, ConnectedService>()
 
     // AIDL 바인더 구현
-    private val binder = object : IModelContextService.Stub() {
+    private val binder = object : IModelContextServiceOld.Stub() {
         override fun discoverServices(callback: IServiceDiscoveryCallback) {
             // 비동기적으로 서비스 검색 시작
             Thread {

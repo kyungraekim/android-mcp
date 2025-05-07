@@ -12,7 +12,7 @@ import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.kyungrae.android.modelcontext.IModelContextService
+import com.kyungrae.android.modelcontext.IModelContextServiceOld
 import com.kyungrae.android.modelcontext.IServiceDiscoveryCallback
 import com.kyungrae.android.modelcontext.ServiceInfo
 import org.json.JSONObject
@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
     private var current: String = ""
     // 서비스 관리자 인터페이스
-    private var serviceManager: IModelContextService? = null
+    private var serviceManager: IModelContextServiceOld? = null
 
     // 현재 선택된 서비스 정보
     private var selectedServiceInfo: ServiceInfo? = null
@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
     private val serviceManagerConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             Log.d(TAG, "Service manager connected")
-            serviceManager = IModelContextService.Stub.asInterface(service)
+            serviceManager = IModelContextServiceOld.Stub.asInterface(service)
             isServiceManagerConnected = true
 
             // 서비스 목록 새로고침

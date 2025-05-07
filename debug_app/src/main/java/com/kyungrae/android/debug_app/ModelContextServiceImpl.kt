@@ -15,21 +15,25 @@ import android.os.Looper
 import android.os.RemoteException
 import android.util.Log
 import com.kyungrae.android.debug_app.adapter.CalendarScheduler
+import com.kyungrae.android.modelcontext.ContentItem
 import com.kyungrae.android.modelcontext.IModelContextApp
 import com.kyungrae.android.modelcontext.IModelContextService
 import com.kyungrae.android.modelcontext.IServiceDiscoveryCallback
+import com.kyungrae.android.modelcontext.ResourceInfo
 import com.kyungrae.android.modelcontext.ServiceInfo
+import com.kyungrae.android.modelcontext.ToolInfo
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * 계산기 서비스 관리자 구현 - 독립된 서비스로 제공
+ * MCP Service implementation
+ * Acts as a central hub for discovering and connecting to MCP-compatible services
  */
 class ModelContextServiceImpl : Service() {
 
     companion object {
-        private const val TAG = "ServiceManager"
+        private const val TAG = "MCPService"
 
         // 상수 정의
         private const val ACTION_DISCOVERY_REQUEST =
@@ -46,21 +50,23 @@ class ModelContextServiceImpl : Service() {
         private const val PREF_KEY_SERVICES = "discovered_services"
     }
 
-    // 발견된 서비스 목록
+    // Discovered services list
     private val discoveredServices = mutableListOf<ServiceInfo>()
 
+    // Build-in adapters
     private val adapters = mutableMapOf<String, Adapter>()
-    // 활성 서비스 연결을 저장하는 맵
+
+    // Active service connections
     private val serviceConnections = mutableMapOf<String, ConnectedService>()
 
-    // AIDL 바인더 구현
+    // AIDL interface implementation
     private val binder = object : IModelContextService.Stub() {
         override fun discoverServices(callback: IServiceDiscoveryCallback) {
-            // 비동기적으로 서비스 검색 시작
+            // Start asynchronous service discovery
             Thread {
                 performServiceDiscovery()
 
-                // 검색 완료 후 콜백 호출
+                // Call callback when discovery completes
                 try {
                     callback.onServicesDiscovered(ArrayList(discoveredServices))
                 } catch (e: RemoteException) {
@@ -98,9 +104,32 @@ class ModelContextServiceImpl : Service() {
         override fun getServiceVersion(serviceType: String): String {
             return getVersion(serviceType)
         }
+
+        // MCP-like tool operations
+        override fun listTools(serviceType: String): MutableList<ToolInfo> {
+            return getToolsList(serviceType)
+        }
+
+        override fun callTool(serviceType: String, toolName: String, jsonArguments: String): MutableList<ContentItem> {
+            return doCallTool(serviceType, toolName, jsonArguments)
+        }
+
+        // MCP-like resource operations
+        override fun listResources(serviceType: String): MutableList<ResourceInfo> {
+            return getResourcesList(serviceType)
+        }
+
+        override fun readResource(serviceType: String, uri: String): MutableList<ContentItem> {
+            return doReadResource(serviceType, uri)
+        }
+
+        // Capability checking
+        override fun serviceHasCapability(serviceType: String, capability: String): Boolean {
+            return checkServiceCapability(serviceType, capability)
+        }
     }
 
-    // 서비스 발견을 위한 브로드캐스트 리시버
+    // Broadcast receiver for service discovery
     private val discoveryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == ACTION_DISCOVERY_RESPONSE) {
@@ -113,10 +142,10 @@ class ModelContextServiceImpl : Service() {
                     "Received discovery response: $packageName/$className, type: $serviceType"
                 )
 
-                // 서비스 정보 객체 생성
+                // Create service info object
                 val service = ServiceInfo(packageName, className, serviceType)
 
-                // 중복 제거
+                // Avoid duplicates
                 if (service !in discoveredServices) {
                     discoveredServices.add(service)
                     Log.d(TAG, "Added new service to discovered list")
@@ -125,7 +154,7 @@ class ModelContextServiceImpl : Service() {
         }
     }
 
-    // 패키지 설치/제거 모니터링 리시버
+    // Package installation/removal monitoring receiver
     private val packageMonitorReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val packageName = intent.data?.schemeSpecificPart ?: return
@@ -135,19 +164,19 @@ class ModelContextServiceImpl : Service() {
                 Intent.ACTION_PACKAGE_ADDED, Intent.ACTION_PACKAGE_REPLACED -> {
                     Log.d(TAG, "Package added or replaced: $packageName")
 
-                    // 새 패키지가 계산기 서비스 앱인지 확인하기 위해 서비스 검색 요청
+                    // Check if the new package is MCP app
                     val discoveryIntent = Intent(ACTION_DISCOVERY_REQUEST)
                     discoveryIntent.setPackage(packageName)
                     sendBroadcast(discoveryIntent)
 
-                    // 전체 서비스 재검색 수행
+                    // Perform full service discovery
                     performServiceDiscovery()
                 }
 
                 Intent.ACTION_PACKAGE_REMOVED -> {
                     Log.d(TAG, "Package removed: $packageName")
 
-                    // 해당 패키지의 서비스 제거
+                    // Remove services from that package
                     val toRemove = discoveredServices.filter { it.packageName == packageName }
                     toRemove.forEach { doDisconnectFromService(it) }
 
@@ -160,12 +189,12 @@ class ModelContextServiceImpl : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "CalculatorServiceManager service created")
+        Log.d(TAG, "MCP service created")
 
-        // 캐시에서 이전에 발견된 서비스 목록 로드
+        // Load previously discovered services from cache
         loadCachedServices()
 
-        // 패키지 설치/제거 모니터링을 위한 리시버 등록
+        // Register receiver for package monitoring
         val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -173,6 +202,8 @@ class ModelContextServiceImpl : Service() {
             addDataScheme("package")
         }
         registerReceiver(packageMonitorReceiver, packageFilter)
+
+        // Add built-in adapters
         addDefaultAdapters()
     }
 
@@ -196,38 +227,38 @@ class ModelContextServiceImpl : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
-        // 모든 서비스 연결 해제
+        // Disconnect all services
         disconnectAllServices()
 
-        // 리시버 등록 해제
+        // Unregister receivers
         try {
             unregisterReceiver(packageMonitorReceiver)
         } catch (e: Exception) {
             Log.e(TAG, "Error unregistering package monitor receiver", e)
         }
 
-        Log.d(TAG, "CalculatorServiceManager service destroyed")
+        Log.d(TAG, "MCP service destroyed")
     }
 
     /**
-     * 전체 서비스 발견 과정 수행
+     * Perform full service discovery process
      */
     private fun performServiceDiscovery() {
         Log.d(TAG, "Starting service discovery...")
 
-        // 브로드캐스트 기반 검색
+        // Broadcast-based discovery
         startBroadcastDiscovery {
-            // 인텐트 기반 백업 검색
+            // Intent-based backup discovery
             val intentServices = discoverViaIntent()
 
-            // 중복 제거하며 결합
+            // Combine without duplicates
             for (service in intentServices) {
                 if (service !in discoveredServices) {
                     discoveredServices.add(service)
                 }
             }
 
-            // 발견된 서비스 목록 캐싱
+            // Cache discovered services list
             saveServicesToCache()
 
             Log.d(TAG, "Service discovery complete. Found ${discoveredServices.size} services")
@@ -529,9 +560,170 @@ class ModelContextServiceImpl : Service() {
     }
 
     /**
-     * 특정 타입의 서비스가 연결되었는지 확인
+     * Get list of tools from a service
+     */
+    private fun getToolsList(serviceType: String): MutableList<ToolInfo> {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return try {
+                    adapter.modelContextApp.listTools()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error calling listTools() on adapter", e)
+                    mutableListOf()
+                }
+            }
+        }
+
+        // Check connected services
+        for (service in serviceConnections.values) {
+            if (service.serviceInfo.serviceType == serviceType) {
+                return try {
+                    service.modelContextApp.listTools()
+                } catch (e: RemoteException) {
+                    Log.e(TAG, "Error calling listTools() on service", e)
+                    mutableListOf()
+                }
+            }
+        }
+
+        return mutableListOf()
+    }
+
+    /**
+     * Call a tool on a service
+     */
+    private fun doCallTool(serviceType: String, toolName: String, jsonArguments: String): MutableList<ContentItem> {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return try {
+                    adapter.modelContextApp.callTool(toolName, jsonArguments)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error calling tool on adapter", e)
+                    mutableListOf(ContentItem.createErrorContent("Tool call error: ${e.message}"))
+                }
+            }
+        }
+
+        // Check connected services
+        for (service in serviceConnections.values) {
+            if (service.serviceInfo.serviceType == serviceType) {
+                return try {
+                    service.modelContextApp.callTool(toolName, jsonArguments)
+                } catch (e: RemoteException) {
+                    Log.e(TAG, "Error calling tool on service", e)
+                    mutableListOf(ContentItem.createErrorContent("Tool call error: ${e.message}"))
+                }
+            }
+        }
+
+        return mutableListOf(ContentItem.createErrorContent("Service not connected or tool not available"))
+    }
+
+    /**
+     * Get list of resources from a service
+     */
+    private fun getResourcesList(serviceType: String): MutableList<ResourceInfo> {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return try {
+                    adapter.modelContextApp.listResources()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error calling listResources() on adapter", e)
+                    mutableListOf()
+                }
+            }
+        }
+
+        // Check connected services
+        for (service in serviceConnections.values) {
+            if (service.serviceInfo.serviceType == serviceType) {
+                return try {
+                    service.modelContextApp.listResources()
+                } catch (e: RemoteException) {
+                    Log.e(TAG, "Error calling listResources() on service", e)
+                    mutableListOf()
+                }
+            }
+        }
+
+        return mutableListOf()
+    }
+
+    /**
+     * Read a resource from a service
+     */
+    private fun doReadResource(serviceType: String, uri: String): MutableList<ContentItem> {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return try {
+                    adapter.modelContextApp.readResource(uri)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error reading resource from adapter", e)
+                    mutableListOf(ContentItem.createErrorContent("Resource read error: ${e.message}"))
+                }
+            }
+        }
+
+        // Check connected services
+        for (service in serviceConnections.values) {
+            if (service.serviceInfo.serviceType == serviceType) {
+                return try {
+                    service.modelContextApp.readResource(uri)
+                } catch (e: RemoteException) {
+                    Log.e(TAG, "Error reading resource from service", e)
+                    mutableListOf(ContentItem.createErrorContent("Resource read error: ${e.message}"))
+                }
+            }
+        }
+
+        return mutableListOf(ContentItem.createErrorContent("Service not connected or resource not available"))
+    }
+
+    /**
+     * Check if a service supports a specific capability
+     */
+    private fun checkServiceCapability(serviceType: String, capability: String): Boolean {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return try {
+                    adapter.modelContextApp.hasCapability(capability)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error checking capability on adapter", e)
+                    false
+                }
+            }
+        }
+
+        // Check connected services
+        for (service in serviceConnections.values) {
+            if (service.serviceInfo.serviceType == serviceType) {
+                return try {
+                    service.modelContextApp.hasCapability(capability)
+                } catch (e: RemoteException) {
+                    Log.e(TAG, "Error checking capability on service", e)
+                    false
+                }
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Check if a service type is connected
      */
     private fun isTypeConnected(serviceType: String): Boolean {
+        // Check built-in adapters
+        if (adapters.values.any { it.serviceInfo.serviceType == serviceType }) {
+            return true
+        }
+
+        // Check connected services
         return serviceConnections.values.any { it.serviceInfo.serviceType == serviceType }
     }
 
@@ -539,6 +731,13 @@ class ModelContextServiceImpl : Service() {
      * 서비스 버전 정보 조회
      */
     private fun getVersion(serviceType: String): String {
+        // First check built-in adapters
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return adapter.modelContextApp.serviceVersion
+            }
+        }
+
         for (service in serviceConnections.values) {
             if (service.serviceInfo.serviceType == serviceType) {
                 return try {
