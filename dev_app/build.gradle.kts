@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.kyungrae.android.debug_app"
+    namespace = "com.kyungrae.android.dev_app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.kyungrae.android.debug_app"
+        applicationId = "com.kyungrae.android.dev_app"
         minSdk = 33
         targetSdk = 35
         versionCode = 1
@@ -40,9 +40,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.gson)
     implementation(project(":service_interface"))
-    implementation(project(":app_interface"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

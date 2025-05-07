@@ -1,6 +1,7 @@
-package com.kyungrae.android.debug_app
+package com.kyungrae.android.dev_app
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -9,13 +10,7 @@ import android.os.IBinder
 import android.os.RemoteException
 import android.util.Log
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Spinner
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.kyungrae.android.modelcontext.IModelContextService
 import com.kyungrae.android.modelcontext.IServiceDiscoveryCallback
@@ -149,8 +144,10 @@ class MainActivity : AppCompatActivity() {
     private fun connectToServiceManager() {
         Log.d(TAG, "Connecting to service manager...")
 
-        val intent = Intent(this, ModelContextServiceImpl::class.java)
-        val bound = bindService(intent, serviceManagerConnection, BIND_AUTO_CREATE)
+        val intent = Intent("com.kyungrae.android.modelcontext.MODELCONTEXT_SERVICE")
+        intent.setPackage("com.kyungrae.android.modelcontext") // 명시적 인텐트
+
+        val bound = bindService(intent, serviceManagerConnection, Context.BIND_AUTO_CREATE)
         if (!bound) {
             Log.e(TAG, "Failed to bind to service manager")
             Toast.makeText(this, "서비스 관리자 연결에 실패했습니다. 앱이 설치되어 있는지 확인하세요.", Toast.LENGTH_LONG).show()
