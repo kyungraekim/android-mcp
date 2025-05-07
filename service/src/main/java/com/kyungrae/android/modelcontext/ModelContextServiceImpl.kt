@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
@@ -14,6 +15,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.RemoteException
 import android.util.Log
+import com.kyungrae.android.modelcontext.adapter.CalendarScheduler
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -44,6 +46,7 @@ class ModelContextServiceImpl : Service() {
     // 발견된 서비스 목록
     private val discoveredServices = mutableListOf<ServiceInfo>()
 
+    private val adapters = mutableMapOf<String, Adapter>()
     // 활성 서비스 연결을 저장하는 맵
     private val serviceConnections = mutableMapOf<String, ConnectedService>()
 
@@ -167,6 +170,19 @@ class ModelContextServiceImpl : Service() {
             addDataScheme("package")
         }
         registerReceiver(packageMonitorReceiver, packageFilter)
+        addDefaultAdapters()
+    }
+
+    private fun addDefaultAdapters() {
+        val adapter = CalendarScheduler(context = ContextWrapper(applicationContext))
+        val serviceInfo = ServiceInfo(
+            packageName = adapter::class.simpleName ?: "",
+            className = adapter::class.java.`package`?.name ?: "",
+            serviceType = adapter.serviceType
+        )
+        discoveredServices.add(serviceInfo)
+        val serviceKey = "${serviceInfo.packageName}/${serviceInfo.className}"
+        adapters[serviceKey] = Adapter(serviceInfo, adapter)
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -493,6 +509,11 @@ class ModelContextServiceImpl : Service() {
      * 계산 실행
      */
     private fun doCalculate(serviceType: String, value: String): String {
+        for (adapter in adapters.values) {
+            if (adapter.serviceInfo.serviceType == serviceType) {
+                return adapter.modelContextApp.calculate(value)
+            }
+        }
         // 해당 타입의 연결된 서비스 찾기
         for (service in serviceConnections.values) {
             if (service.serviceInfo.serviceType == serviceType) {
@@ -539,6 +560,11 @@ class ModelContextServiceImpl : Service() {
     private data class ConnectedService(
         val serviceInfo: ServiceInfo,
         val serviceConnection: ServiceConnection,
+        val modelContextApp: IModelContextApp
+    )
+
+    private data class Adapter(
+        val serviceInfo: ServiceInfo,
         val modelContextApp: IModelContextApp
     )
 }

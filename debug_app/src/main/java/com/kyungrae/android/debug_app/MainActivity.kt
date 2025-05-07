@@ -458,7 +458,8 @@ class MainActivity : AppCompatActivity() {
         jsonObject.put("durationMinutes", 60)
         val jsonString = jsonObject.toString()
 
-        Toast.makeText(this, jsonString, Toast.LENGTH_SHORT).show()
+        val result = serviceManager?.calculate("schedule", jsonString)
+        Toast.makeText(this, result?:"Done", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
