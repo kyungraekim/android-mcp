@@ -81,7 +81,7 @@ class ModelContextServiceImpl : Service() {
             doDisconnectFromService(serviceInfo)
         }
 
-        override fun calculate(serviceType: String, value: Int): String {
+        override fun calculate(serviceType: String, value: String): String {
             return doCalculate(serviceType, value)
         }
 
@@ -492,7 +492,7 @@ class ModelContextServiceImpl : Service() {
     /**
      * 계산 실행
      */
-    private fun doCalculate(serviceType: String, value: Int): String {
+    private fun doCalculate(serviceType: String, value: String): String {
         // 해당 타입의 연결된 서비스 찾기
         for (service in serviceConnections.values) {
             if (service.serviceInfo.serviceType == serviceType) {

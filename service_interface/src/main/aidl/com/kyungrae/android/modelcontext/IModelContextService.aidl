@@ -19,7 +19,7 @@ interface IModelContextService {
     void disconnectFromService(in ServiceInfo serviceInfo);
 
     // 연결된 서비스를 통한 계산 요청
-    String calculate(String serviceType, int value);
+    String calculate(String serviceType, String value);
 
     // 특정 유형의 서비스가 연결되었는지 확인
     boolean isServiceTypeConnected(String serviceType);

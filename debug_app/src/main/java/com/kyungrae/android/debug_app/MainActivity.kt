@@ -15,6 +15,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.kyungrae.android.modelcontext.IModelContextService
 import com.kyungrae.android.modelcontext.IServiceDiscoveryCallback
 import com.kyungrae.android.modelcontext.ServiceInfo
+import org.json.JSONObject
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,11 +30,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnDisconnect: Button
     private lateinit var etValue: EditText
     private lateinit var btnCalculate: Button
+    private lateinit var btnSchedule: Button
     private lateinit var tvServiceVersion: TextView
     private lateinit var tvServiceStatus: TextView
     private lateinit var tvResult: TextView
     private lateinit var tvDebugInfo: TextView
 
+    private var current: String = ""
     // 서비스 관리자 인터페이스
     private var serviceManager: IModelContextService? = null
 
@@ -110,6 +115,7 @@ class MainActivity : AppCompatActivity() {
         btnDisconnect = findViewById(R.id.btnDisconnect)
         etValue = findViewById(R.id.etValue)
         btnCalculate = findViewById(R.id.btnCalculate)
+        btnSchedule = findViewById(R.id.btnSchedule)
         tvServiceVersion = findViewById(R.id.tvServiceVersion)
         tvServiceStatus = findViewById(R.id.tvServiceStatus)
         tvResult = findViewById(R.id.tvResult)
@@ -120,6 +126,7 @@ class MainActivity : AppCompatActivity() {
         btnConnect.isEnabled = false
         btnDisconnect.isEnabled = false
         btnCalculate.isEnabled = false
+        btnSchedule.isEnabled = false
 
         // 힌트 텍스트 설정
         updateInputHint()
@@ -183,6 +190,11 @@ class MainActivity : AppCompatActivity() {
         btnCalculate.setOnClickListener {
             performCalculation()
         }
+
+        // 스케줄 버튼
+        btnSchedule.setOnClickListener {
+            addSchedule()
+        }
     }
 
     private fun refreshAvailableServices() {
@@ -242,6 +254,7 @@ class MainActivity : AppCompatActivity() {
             btnConnect.isEnabled = false
             btnDisconnect.isEnabled = false
             btnCalculate.isEnabled = false
+            btnSchedule.isEnabled = false
             return
         }
 
@@ -267,6 +280,7 @@ class MainActivity : AppCompatActivity() {
             btnConnect.isEnabled = isServiceAvailable && !isServiceConnected
             btnDisconnect.isEnabled = isServiceConnected
             btnCalculate.isEnabled = isServiceConnected
+            btnSchedule.isEnabled = isServiceConnected
 
         } catch (e: RemoteException) {
             Log.e(TAG, "Error in updateServiceStatus()", e)
@@ -308,6 +322,7 @@ class MainActivity : AppCompatActivity() {
         btnConnect.isEnabled = false
         btnDisconnect.isEnabled = false
         btnCalculate.isEnabled = false
+        btnSchedule.isEnabled = false
 
         updateDebugInfo()
 
@@ -392,16 +407,19 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val value = valueStr.toInt()
+            // val value = valueStr.toInt()
 
             // 서비스 관리자를 통해 계산 요청
-            val result = serviceManager?.calculate(selectedServiceType, value)
+            val result = serviceManager?.calculate(selectedServiceType, valueStr)
 
             // 결과 표시
             if (selectedServiceType == "date") {
                 tvResult.text = "계산된 날짜: $result"
             } else {
                 tvResult.text = "계산된 시간: $result"
+            }
+            if (result != null) {
+                current = result
             }
 
         } catch (e: NumberFormatException) {
@@ -410,6 +428,37 @@ class MainActivity : AppCompatActivity() {
             Log.e(TAG, "Error calling service", e)
             Toast.makeText(this, "서비스 호출 중 오류가 발생했습니다: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun addSchedule() {
+        if (!isServiceManagerConnected) {
+            Toast.makeText(this, "서비스 관리자에 연결되어 있지 않습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (current.isBlank()) {
+            Toast.makeText(this, "먼저 날짜/시간을 계산해주세요.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val localDateTime = LocalDateTime.parse(current, inputFormatter)
+
+        val dayFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val dayString = localDateTime.format(dayFormatter)
+
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+        val timeString = localDateTime.format(timeFormatter)
+
+        val jsonObject = JSONObject()
+        jsonObject.put("title", "Sample Schedule")
+        jsonObject.put("location", "Sample Location")
+        jsonObject.put("day", dayString)
+        jsonObject.put("startTime", timeString)
+        jsonObject.put("durationMinutes", 60)
+        val jsonString = jsonObject.toString()
+
+        Toast.makeText(this, jsonString, Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {

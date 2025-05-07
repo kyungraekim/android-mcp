@@ -22,13 +22,17 @@ class DateCalculatorService : Service() {
             return "date"
         }
 
-        override fun calculate(value: Int): String {
+        override fun calculate(value: String): String {
+            return calculate(value.toInt());
+        }
+
+        fun calculate(value: Int): String {
             Log.d(TAG, "calculate called with days: $value")
 
             val calendar = Calendar.getInstance()
             calendar.add(Calendar.DAY_OF_YEAR, value)
 
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val resultDate = dateFormat.format(calendar.time)
 
             Log.d(TAG, "Result date: $resultDate")

@@ -22,7 +22,11 @@ class TimeCalculatorService : Service() {
             return "time"
         }
 
-        override fun calculate(value: Int): String {
+        override fun calculate(value: String): String {
+            return calculate(value.toInt());
+        }
+
+        fun calculate(value: Int): String {
             Log.d(TAG, "calculate called with hours: $value")
 
             val calendar = Calendar.getInstance()
