@@ -210,8 +210,8 @@ class ModelContextServiceImpl : Service() {
     private fun addDefaultAdapters() {
         val adapter = CalendarScheduler(context = ContextWrapper(applicationContext))
         val serviceInfo = ServiceInfo(
-            packageName = adapter::class.simpleName ?: "",
-            className = adapter::class.java.`package`?.name ?: "",
+            packageName = adapter::class.java.`package`?.name ?: "",
+            className = adapter::class.simpleName ?: "",
             serviceType = adapter.serviceType
         )
         discoveredServices.add(serviceInfo)
