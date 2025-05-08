@@ -20,25 +20,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="클라이언트"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp" />
-
-            <TextView
-                android:id="@+id/tvDescription"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="서비스를 통해 MCP 기능을 사용합니다."
-                android:textSize="16sp"
-                android:gravity="center"
-                android:layout_marginTop="8dp" />
-
             <!-- 서비스 선택 영역 -->
             <TextView
                 android:id="@+id/tvSelectService"
@@ -46,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:text="사용할 서비스 유형:"
                 android:textSize="16sp"
-                android:layout_marginTop="24dp" />
+                android:layout_marginTop="8dp" />
 
             <Spinner
                 android:id="@+id/spinnerServiceType"
@@ -121,35 +102,50 @@
                 android:textStyle="bold"
                 android:layout_marginTop="24dp" />
 
-            <TextView
-                android:id="@+id/tvValueLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="입력값:"
-                android:textSize="16sp"
-                android:layout_marginTop="16dp" />
-
-            <EditText
-                android:id="@+id/etValue"
+            <LinearLayout
+                android:id="@+id/layoutInputs"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"
-                android:hint="숫자 입력"
-                android:layout_marginTop="8dp" />
+                android:layout_height="wrap_content">
 
-            <Button
-                android:id="@+id/btnCalculate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="계산하기"
-                android:layout_marginTop="16dp" />
+                <TextView
+                    android:id="@+id/tvValueLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="입력값:"
+                    android:textSize="16sp"
+                    android:layout_marginTop="16dp" />
 
-            <Button
-                android:id="@+id/btnSchedule"
+                <EditText
+                    android:id="@+id/etValue"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:inputType="number"
+                    android:hint="숫자 입력"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutActionButtons"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="일정 추가"
-                android:layout_marginTop="16dp" />
+                android:layout_height="wrap_content">
+
+                <Button
+                    android:id="@+id/btnCalculate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="계산하기"
+                    android:layout_marginTop="16dp" />
+
+                <Button
+                    android:id="@+id/btnSchedule"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="일정 추가"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
 
             <!-- 결과 영역 -->
             <TextView
