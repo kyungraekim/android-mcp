@@ -24,8 +24,6 @@ import com.kyungrae.android.modelcontext.ServiceInfo
 import com.kyungrae.android.modelcontext.ToolInfo
 import org.json.JSONObject
 import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -377,6 +375,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun shortenPackageName(packageName: String): String {
+        val splits = packageName.split('.')
+        val len = splits.size
+        return splits.mapIndexed { index, part ->
+                if (index == len - 1) {
+                    part
+                } else {
+                    part.firstOrNull()?.toString() ?: ""
+                }
+            }
+            .joinToString(".")
+    }
+
     private fun updateDebugInfo() {
         // 디버그 정보 업데이트
         val debugInfo = StringBuilder()
@@ -387,7 +398,13 @@ class MainActivity : AppCompatActivity() {
             debugInfo.append("발견된 서비스: ${discoveredServices.size}개\n")
 
             for ((index, service) in discoveredServices.withIndex()) {
-                debugInfo.append("${index + 1}. 타입: ${service.serviceType}, 패키지: ${service.packageName}\n")
+                debugInfo.append(
+                    "${index + 1}. 타입: ${service.serviceType}, 패키지: ${
+                        shortenPackageName(
+                            service.packageName
+                        )
+                    }\n"
+                )
             }
 
             debugInfo.append("\n선택된 서비스 타입: $selectedServiceType\n")
@@ -438,6 +455,7 @@ class MainActivity : AppCompatActivity() {
                 Handler(mainLooper).postDelayed({
                     updateServiceStatus()
                     updateDebugInfo()
+                    fetchToolsAndResources()
                 }, 500)
             } else {
                 Toast.makeText(this, "서비스 연결에 실패했습니다.", Toast.LENGTH_SHORT).show()
