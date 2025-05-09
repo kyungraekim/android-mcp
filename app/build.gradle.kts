@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,6 +19,30 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(FileInputStream(localPropertiesFile))
+        }
+
+        data class ConfigField(val name: String, val type: String, val required: Boolean = true)
+        val configFields = listOf(
+            ConfigField("AZURE_OPENAI_ENDPOINT", "String"),
+            ConfigField("AZURE_OPENAI_API_KEY", "String"),
+            ConfigField("AZURE_OPENAI_API_VERSION", "String"),
+            ConfigField("AZURE_OPENAI_DEPLOYMENT_NAME", "String")
+        )
+        for (field in configFields) {
+            val rawValue = localProperties.getProperty(field.name)
+
+            if (rawValue.isNullOrBlank() && field.required) {
+                throw GradleException("${field.name} not found in local.properties")
+            }
+
+            val value = rawValue?: ""
+            buildConfigField("String", field.name, "\"$value\"")
+        }
     }
 
     buildTypes {
@@ -35,7 +62,8 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
-        compose = true
+        viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -50,7 +78,14 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.mcp.kotlin.sdk)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.appcompat)
+    implementation(project(":service_interface"))
+    implementation(project(":app_interface"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
